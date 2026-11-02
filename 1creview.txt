@@ -1,0 +1,48 @@
+#!/bin/bash
+FILE="addressbook.txt"
+while true
+do
+    echo
+    echo "----- ADDRESS BOOK -----"
+    echo "1. Create Address Book"
+    echo "2. View Address Book"
+    echo "3. Exit"
+    read -p "Enter choice: " ch
+    case $ch in
+        1)
+            if [ -f "$FILE" ]; then
+                read -p "Address book already exists. Overwrite? (y/n): " ans
+                if [ "$ans" != "y" ]; then
+                    continue
+                fi
+            fi
+            > "$FILE"
+            read -p "Enter number of records: " n
+            for ((i=1; i<=n; i++))
+            do
+                echo "Enter details of record $i"
+                read -p "Name: " name
+                read -p "Address: " address
+                read -p "Mobile: " mobile
+                read -p "Email: " email
+                echo "$name|$address|$mobile|$email" >> "$FILE"
+            done
+            echo "Address Book Created Successfully!"
+            ;;
+        2)
+            if [ -s "$FILE" ]; then
+                echo "Name | Address | Mobile | Email"
+                column -s '|' -t "$FILE"
+            else
+                echo "Address Book is Empty or Does Not Exist!"
+            fi
+            ;;
+        3)
+            exit 0
+            ;;
+
+        *)
+            echo "Invalid Choice!"
+            ;;
+    esac
+done

@@ -1,0 +1,94 @@
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/wait.h>
+
+int main()
+{
+    int a[100], n, i, j, temp;
+    pid_t pid;
+
+    printf("Enter number of elements: ");
+    scanf("%d", &n);
+
+    printf("Enter elements: ");
+    for(i = 0; i < n; i++)
+        scanf("%d", &a[i]);
+
+    fflush(stdout);
+
+    // Zombie Process
+    pid = fork();
+
+    if(pid == 0)
+    {
+        printf("\nChild process sorting elements:\n");
+
+        for(i = 0; i < n-1; i++)
+        {
+            for(j = 0; j < n-i-1; j++)
+            {
+                if(a[j] > a[j+1])
+                {
+                    temp = a[j];
+                    a[j] = a[j+1];
+                    a[j+1] = temp;
+                }
+            }
+        }
+
+        printf("Sorted array: ");
+        for(i = 0; i < n; i++)
+            printf("%d ", a[i]);
+
+        printf("\nChild process finished.\n");
+        exit(0);
+    }
+    else if(pid > 0)
+    {
+        printf("\nParent PID: %d", getpid());
+        printf("\nChild PID: %d\n", pid);
+
+        sleep(2);
+
+        printf("\nZombie process status:\n");
+
+        char cmd[100];
+        snprintf(cmd, sizeof(cmd),
+                 "ps -o pid,ppid,stat,cmd -p %d", pid);
+        system(cmd);
+
+        waitpid(pid, NULL, 0);
+
+        printf("Zombie process removed using wait().\n");
+    }
+
+    // Orphan Process
+    printf("\n--- Orphan Process Demonstration ---\n");
+
+    pid = fork();
+
+    if(pid == 0)
+    {
+        printf("Child PID: %d", getpid());
+        printf("\nParent PID before exit: %d\n", getppid());
+
+        fflush(stdout);
+        sleep(5);
+
+        printf("Parent PID after parent exit: %d\n", getppid());
+        printf("Orphan child completed.\n");
+        exit(0);
+    }
+    else if(pid > 0)
+    {
+        printf("Parent is exiting before child.\n");
+        fflush(stdout);
+        sleep(2);
+        printf("Parent exiting now.\n");
+        return 0;
+    }
+
+    return 0;
+}
+

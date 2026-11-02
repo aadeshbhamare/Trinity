@@ -1,0 +1,63 @@
+#!/bin/bash
+
+FILE="addressbook1.txt"
+
+while true
+do
+    echo
+    echo "----- ADDRESS BOOK -----"
+    echo "1. Insert Record"
+    echo "2. Delete Record"
+    echo "3. Exit"
+
+    read -p "Enter choice: " ch
+
+    case $ch in
+        1)
+            read -p "Enter Name: " name
+            read -p "Enter Address: " address
+            read -p "Enter Mobile: " mobile
+            read -p "Enter Email: " email
+
+            if grep -Fq "|$mobile|" "$FILE" 2>/dev/null; then
+                echo "Mobile Number Already Exists!"
+            else
+                echo "$name|$address|$mobile|$email" >> "$FILE"
+                echo "Record Inserted Successfully!"
+            fi
+            ;;
+
+        2)
+            if [ ! -f "$FILE" ]; then
+                echo "Address Book Does Not Exist!"
+                continue
+            fi
+
+            read -p "Enter Mobile Number to Delete: " mobile
+
+            awk -F'|' -v m="$mobile" '
+                $3 != m { print; next }
+                { found=1 }
+                END {
+                    if (!found)
+                        print "Record Not Found!" > "/dev/stderr"
+                }
+            ' "$FILE" > temp.txt
+
+            if grep -Fq "|$mobile|" "$FILE"; then
+                mv temp.txt "$FILE"
+                echo "Record Deleted Successfully!"
+            else
+                rm -f temp.txt
+            fi
+            ;;
+
+        3)
+            exit 0
+            ;;
+
+        *)
+            echo "Invalid Choice!"
+            ;;
+    esac
+done

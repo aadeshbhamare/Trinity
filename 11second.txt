@@ -1,0 +1,85 @@
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+
+int main()
+{
+    int fd1, fd2;
+    char buffer[1000];
+
+    int characters = 0;
+    int words = 0;
+    int lines = 0;
+    int inWord = 0;
+    int n;
+
+    mkfifo("fifo1", 0666);
+    mkfifo("fifo2", 0666);
+
+    fd1 = open("fifo1", O_RDONLY);
+
+    while ((n = read(fd1, buffer, sizeof(buffer))) > 0)
+    {
+        if (n == 4 && memcmp(buffer, "END\n", 4) == 0)
+            break;
+
+        characters += n;
+
+        for (int i = 0; i < n; i++)
+        {
+            if (buffer[i] == '\n')
+                lines++;
+
+            if (buffer[i] == ' ' || buffer[i] == '\n' ||
+                buffer[i] == '\t')
+            {
+                inWord = 0;
+            }
+            else if (inWord == 0)
+            {
+                words++;
+                inWord = 1;
+            }
+        }
+    }
+
+    close(fd1);
+
+    FILE *fp = fopen("result.txt", "w");
+
+    if (fp == NULL)
+    {
+        perror("File creation failed");
+        return 1;
+    }
+
+    fprintf(fp, "Number of Characters: %d\n", characters);
+    fprintf(fp, "Number of Words: %d\n", words);
+    fprintf(fp, "Number of Lines: %d\n", lines);
+
+    fclose(fp);
+
+    fp = fopen("result.txt", "r");
+
+    if (fp == NULL)
+    {
+        perror("File opening failed");
+        return 1;
+    }
+
+    fd2 = open("fifo2", O_WRONLY);
+
+    while ((n = fread(buffer, 1, sizeof(buffer), fp)) > 0)
+    {
+        write(fd2, buffer, n);
+    }
+
+    fclose(fp);
+    close(fd2);
+
+    return 0;
+}

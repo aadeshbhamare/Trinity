@@ -1,0 +1,112 @@
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <sys/wait.h>
+
+int main()
+{
+    int p1[2], p2[2];
+    pid_t pid;
+
+    char filename[256];
+    char buffer[1024];
+    int n;
+
+    // Create two pipes
+    if (pipe(p1) == -1 || pipe(p2) == -1)
+    {
+        perror("Pipe creation failed");
+        return 1;
+    }
+
+    // Create child process
+    pid = fork();
+
+    if (pid < 0)
+    {
+        perror("Fork failed");
+        return 1;
+    }
+
+    if (pid > 0)
+    {
+        // Parent Process
+
+        close(p1[0]);
+        close(p2[1]);
+
+        printf("Enter file pathname: ");
+        fgets(filename, sizeof(filename), stdin);
+
+        filename[strcspn(filename, "\n")] = '\0';
+
+        // Send filename to child
+        write(p1[1], filename, strlen(filename) + 1);
+
+        close(p1[1]);
+
+        printf("\nFile contents received from child:\n\n");
+
+        // Receive file contents from child
+        while ((n = read(p2[0], buffer, sizeof(buffer))) > 0)
+        {
+            write(STDOUT_FILENO, buffer, n);
+        }
+
+        close(p2[0]);
+
+        wait(NULL);
+    }
+    else
+    {
+        // Child Process
+
+        close(p1[1]);
+        close(p2[0]);
+
+        // Read filename from parent
+        int i = 0;
+
+        while (i < sizeof(filename) - 1)
+        {
+            if (read(p1[0], &filename[i], 1) != 1)
+                break;
+
+            if (filename[i] == '\0')
+                break;
+
+            i++;
+        }
+
+        filename[i] = '\0';
+
+        close(p1[0]);
+
+        // Open the specified file
+        FILE *fp = fopen(filename, "r");
+
+        if (fp == NULL)
+        {
+            char error[] = "Error: File not found or cannot be opened.\n";
+            write(p2[1], error, strlen(error));
+        }
+        else
+        {
+            // Read file contents and send to parent
+            while ((n = fread(buffer, 1, sizeof(buffer), fp)) > 0)
+            {
+                write(p2[1], buffer, n);
+            }
+
+            fclose(fp);
+        }
+
+        close(p2[1]);
+
+        exit(0);
+    }
+
+    return 0;
+}

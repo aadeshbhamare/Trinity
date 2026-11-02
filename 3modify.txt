@@ -1,0 +1,69 @@
+
+#!/bin/bash
+
+FILE="addressbook3.txt"
+
+# Create file with default records if it does not exist
+if [ ! -f "$FILE" ]; then
+    cat > "$FILE" << EOF
+Aadesh|Pune|9876543210|aadesh@gmail.com
+Rahul|Mumbai|9876543211|rahul@gmail.com
+Priya|Nashik|9876543212|priya@gmail.com
+EOF
+    echo "Address Book Created Successfully with Default Records!"
+fi
+
+while true
+do
+    echo
+    echo "----- ADDRESS BOOK -----"
+    echo "1. Modify Record"
+    echo "2. Exit"
+
+    read -p "Enter choice: " ch
+
+    case $ch in
+        1)
+            read -p "Enter Mobile Number to Modify: " mobile
+
+            if ! grep -Fq "|$mobile|" "$FILE"; then
+                echo "Record Not Found!"
+                continue
+            fi
+
+            read -p "Enter New Name: " name
+            read -p "Enter New Address: " address
+            read -p "Enter New Mobile: " newmobile
+            read -p "Enter New Email: " email
+
+            if [ "$mobile" != "$newmobile" ] &&
+               grep -Fq "|$newmobile|" "$FILE"; then
+                echo "New Mobile Number Already Exists!"
+                continue
+            fi
+
+            awk -F'|' -v m="$mobile" \
+                -v n="$name" -v a="$address" \
+                -v p="$newmobile" -v e="$email" '
+                $3 == m {
+                    print n "|" a "|" p "|" e
+                    next
+                }
+                { print }
+            ' "$FILE" > temp.txt
+
+            mv temp.txt "$FILE"
+
+            echo "Record Modified Successfully!"
+            ;;
+
+        2)
+            echo "Exiting Address Book..."
+            exit 0
+            ;;
+
+        *)
+            echo "Invalid Choice!"
+            ;;
+    esac
+done

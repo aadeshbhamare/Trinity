@@ -1,0 +1,59 @@
+Q11. Full-Duplex Communication Between Two Independent Processes Using FIFOs
+Aim: To write a C program for full-duplex communication between two independent processes using FIFOs. The first process accepts sentences and writes them to the first pipe. The second process counts the number of characters, words and lines, stores the results in a text file, and sends the file contents through the second pipe. The first process reads and displays the results.
+
+For this question, we will create two separate C programs, because the AIM specifically says independent processes. We will use two named FIFOs.
+Program 1: First Process (Sender and Receiver)
+File name: first.c
+
+
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+
+int main()
+{
+    int fd1, fd2;
+    char sentence[500];
+    char buffer[1000];
+    int n;
+
+    mkfifo("fifo1", 0666);
+    mkfifo("fifo2", 0666);
+
+    printf("Enter sentences (type END to stop):\n");
+
+    fd1 = open("fifo1", O_WRONLY);
+
+    while (1)
+    {
+        fgets(sentence, sizeof(sentence), stdin);
+
+        write(fd1, sentence, strlen(sentence));
+
+        if (strcmp(sentence, "END\n") == 0)
+            break;
+    }
+
+    close(fd1);
+
+    fd2 = open("fifo2", O_RDONLY);
+
+    printf("\nResults received from second process:\n");
+
+    while ((n = read(fd2, buffer, sizeof(buffer) - 1)) > 0)
+    {
+        buffer[n] = '\0';
+        printf("%s", buffer);
+    }
+
+    close(fd2);
+
+    unlink("fifo1");
+    unlink("fifo2");
+
+    return 0;
+}
